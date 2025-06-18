@@ -20,7 +20,10 @@ export interface BaseProps {
   modal: boolean;
   title: string;
   controlShowTime: number;
+  scrollDuration?: number; // スクロールアニメーションの時間（ミリ秒）
   lastPageElement?: HTMLElement;
+  showLastPage?: boolean; // 最終ページの表示可否を制御するオプション
+  autoClose?: boolean; // 最終ページで自動的に閉じるかどうかのオプション
 }
 
 interface Props extends BaseProps {
@@ -38,7 +41,7 @@ export class Main extends ComponentBase {
   /** 空ページ(奇数ページで見開き表示時に表示させる) */
   #blankPage: EmptyPage;
   /** 最終ページ */
-  #lastPage: EmbedPage;
+  #lastPage: EmbedPage | null;
   /** コンテンツのページ、空ページ、最終ページ全部含めたページ一覧 */
   #allPages: PageBase[];
   #controlArea: ControlArea;
@@ -57,6 +60,7 @@ export class Main extends ComponentBase {
   #closeButtonRef: JSX.RefElement;
 
   constructor(loadablePageContents: LoadablePageContent[], props: Props) {
+    console.log('Main constructor');
     super();
 
     this.#props = props;
@@ -103,6 +107,9 @@ export class Main extends ComponentBase {
         '--default-height',
         `${this.#props.pageSize.height}`
       );
+      // scrollDurationの設定（デフォルトは300ms）
+      const scrollDuration = this.#props.scrollDuration ?? 300;
+      el.style.setProperty('--scroll-duration', `${scrollDuration}ms`);
 
       el.addEventListener('click', autoFadeoutCtrl);
       enableAutoFadeout();
@@ -126,15 +133,23 @@ export class Main extends ComponentBase {
       onTapRight: () => this.goRight(),
     });
 
-    this.#lastPage = new EmbedPage({
-      index: this.pages.length + 1,
-      element: this.#props.lastPageElement,
-      onTapLeft: () => this.goLeft(),
-      onTapRight: () => this.goRight(),
-      onDispose: () => this.#props.onDispose(),
-    });
+    // showLastPageがfalseの場合、またはlastPageElementがnullでshowLastPageがfalseの場合、最終ページを作成しない
+    if (this.#props.showLastPage !== false) {
+      this.#lastPage = new EmbedPage({
+        index: this.pages.length + 1,
+        element: this.#props.lastPageElement,
+        onTapLeft: () => this.goLeft(),
+        onTapRight: () => this.goRight(),
+        onDispose: () => this.#props.onDispose(),
+      });
+    } else {
+      this.#lastPage = null;
+    }
 
-    this.#allPages = [...this.pages, this.#blankPage, this.#lastPage];
+    // 最終ページが存在する場合のみallPagesに追加
+    this.#allPages = this.#lastPage 
+      ? [...this.pages, this.#blankPage, this.#lastPage]
+      : [...this.pages, this.#blankPage];
 
     this.#controlArea = new ControlArea({
       title: this.#props.title,
@@ -156,7 +171,7 @@ export class Main extends ComponentBase {
         // 空ページ選択の場合は最後のページへ遷移
         const element =
           page === this.#blankPage
-            ? this.#lastPage.thumbnailElement
+            ? this.#lastPage?.thumbnailElement
             : page?.thumbnailElement;
         element?.scrollIntoView();
       },
@@ -235,6 +250,14 @@ export class Main extends ComponentBase {
     this.#props.direction = direction;
     this.#controlArea.direction = direction;
     this.#updateRootClasses();
+  }
+
+  get scrollDuration(): number | undefined {
+    return this.#props.scrollDuration;
+  }
+
+  set scrollDuration(duration: number | undefined) {
+    this.#props.scrollDuration = duration;
   }
 
   openSettings() {
@@ -335,7 +358,7 @@ export class Main extends ComponentBase {
       },
       {
         root: viewerPagesElm,
-        threshold: 0.6,
+        threshold: 0.2,
       }
     );
 
@@ -354,6 +377,7 @@ export class Main extends ComponentBase {
   }
 
   get isLastPage(): boolean {
+    if (!this.#lastPage) return false;
     const page = this.#allPages.find((p) => p.index === this.currentIndex);
     return page?.element === this.#lastPage.element;
   }
@@ -366,6 +390,15 @@ export class Main extends ComponentBase {
     this.#currentIndexes = indexes;
     this.#controlArea.currentIndex = this.currentIndex;
     this.#reflectCurrentIndexes();
+    
+    // autoCloseが有効で、最終ページに移動したら自動的にviewerを閉じる
+    if (this.#props.autoClose && this.#lastPage && this.isLastPage) {
+      // 少し遅延を入れてから閉じる（ユーザーが最終ページを確認できるように）
+      setTimeout(() => {
+        this.#props.onDispose();
+      }, 1000);
+    }
+    
     for (const handler of this.#currentIndexChangedHandlers) {
       handler(this.currentIndex);
     }
@@ -377,7 +410,8 @@ export class Main extends ComponentBase {
     } else {
       this.#rootRef.current?.classList.remove(FIRST_PAGE_SHOWN);
     }
-    if (this.#currentIndexes.includes(this.#lastPage.index)) {
+    // 最終ページが存在する場合のみ処理
+    if (this.#lastPage && this.#currentIndexes.includes(this.#lastPage.index)) {
       this.#rootRef.current?.classList.add(LAST_PAGE_SHOWN);
     } else {
       this.#rootRef.current?.classList.remove(LAST_PAGE_SHOWN);
@@ -392,6 +426,15 @@ export class Main extends ComponentBase {
   }
 
   goNext() {
+    // 最終ページが表示されない場合の処理
+    if (!this.#lastPage) {
+      // 現在のページが最終ページ（空ページの前）の場合、viewを閉じる
+      if (this.currentIndex >= this.pages.length - 1) {
+        this.#props.onDispose();
+        return;
+      }
+    }
+    
     this.goTo(this.currentIndex + (this.#isSpreadStyle ? 2 : 1));
   }
 
@@ -404,13 +447,57 @@ export class Main extends ComponentBase {
   }
 
   goTo(index: number) {
+    // 最終ページが表示されない場合の処理
+    if (!this.#lastPage) {
+      // 指定されたインデックスがページ数を超える場合、viewを閉じる
+      if (index >= this.pages.length) {
+        this.#props.onDispose();
+        return;
+      }
+    }
+
     const page = this.#allPages.find((p) => p.index === index);
-    // 空ページ選択の場合は最後のページへ遷移
+    // 空ページ選択の場合は最後のページへ遷移（最終ページが存在する場合のみ）
     const element =
-      page === this.#blankPage ? this.#lastPage.element : page?.element;
-    // 非同期にしないと動作しないことが稀にあるため
-    window.setTimeout(() => {
-      element?.scrollIntoView();
-    }, 1);
+      page === this.#blankPage && this.#lastPage
+        ? this.#lastPage.element 
+        : page?.element;
+    
+    if (!element) return;
+    
+    // スクロールアニメーションの時間を取得（デフォルトは300ms）
+    const scrollDuration = this.#props.scrollDuration ?? 300;
+    
+    // カスタムスクロールアニメーション
+    this.#smoothScrollTo(element, scrollDuration);
+  }
+
+  #smoothScrollTo(targetElement: HTMLElement, duration: number) {
+    const viewerPagesElm = this.#viewerPagesRef.current;
+    if (!viewerPagesElm) return;
+
+    const startPosition = viewerPagesElm.scrollLeft;
+    const targetPosition = targetElement.offsetLeft - viewerPagesElm.offsetLeft;
+    const distance = targetPosition - startPosition;
+    const startTime = performance.now();
+
+    const animateScroll = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // イージング関数（ease-in-out）
+      const easeProgress = progress < 0.5 
+        ? 2 * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      
+      const currentPosition = startPosition + distance * easeProgress;
+      viewerPagesElm.scrollLeft = currentPosition;
+
+      if (progress < 1) {
+        requestAnimationFrame(animateScroll);
+      }
+    };
+
+    requestAnimationFrame(animateScroll);
   }
 }

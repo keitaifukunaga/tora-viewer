@@ -9,6 +9,7 @@ interface JSXFactory {
 }
 
 export const jsxFactory: JSXFactory = {
+  // @ts-ignore
   h(tag, props, ...children) {
     return { tag, props, children };
   },

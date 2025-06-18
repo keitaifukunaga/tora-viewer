@@ -7,6 +7,7 @@ import { asyncLoadBuilder } from './utils/async-load-builder';
 
 interface Options extends Partial<BaseProps> {
   insertTarget?: HTMLElement | 'string';
+  showLastPage?: boolean;
 }
 
 function main(
@@ -46,6 +47,9 @@ function main(
 
 main.asyncLoadBuilder = asyncLoadBuilder;
 
+// Viewerクラスを直接エクスポート
+export { Viewer, type BaseProps };
+
 export default main;
 
 function normalizeOptions(options?: Options): BaseProps {
@@ -65,6 +69,8 @@ function normalizeOptions(options?: Options): BaseProps {
     modal,
     title: options?.title ?? '',
     controlShowTime: options?.controlShowTime ?? 3000,
+    scrollDuration: options?.scrollDuration,
     lastPageElement: options?.lastPageElement,
+    showLastPage: options?.showLastPage ?? true,
   };
 }

@@ -84,6 +84,14 @@ export class Viewer {
     return this.#disposed;
   }
 
+  /**
+   * 現在のページインデックスが変更された時に呼び出されるコールバックを登録します
+   * @param handler ページインデックス変更時のコールバック関数
+   */
+  onCurrentIndexChanged(handler: (index: number) => void) {
+    this.#main.onCurrentIndexChanged(handler);
+  }
+
   goBack() {
     this.#main.goBack();
   }
@@ -102,6 +110,14 @@ export class Viewer {
 
   goTo(index: number) {
     this.#main.goTo(index);
+  }
+
+  get scrollDuration(): number | undefined {
+    return this.#main.scrollDuration;
+  }
+
+  set scrollDuration(duration: number | undefined) {
+    this.#main.scrollDuration = duration;
   }
 
   dispose() {
