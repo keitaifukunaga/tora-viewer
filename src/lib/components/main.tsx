@@ -12,6 +12,7 @@ import { LoadablePageContent } from '../interfaces/page-content';
 import { createFaIcon } from '../utils/create-fa-icon';
 import { ControlArea } from './control-area';
 import { ViewSettings } from './view-settings';
+import { isMobileDevice } from '../utils/device-detection';
 
 export interface BaseProps {
   pageSize: PageSize;
@@ -69,6 +70,9 @@ export class Main extends ComponentBase {
     let autoFadeout = true;
     this.#isSpreadStyle = props.pageStyle === 'spread';
 
+    // スマホの場合はクリックイベントを無効にする
+    const isMobile = isMobileDevice();
+
     const autoFadeoutCtrl = () => {
       if (!autoFadeout) return;
       window.clearTimeout(hideMainVisibleId);
@@ -111,7 +115,10 @@ export class Main extends ComponentBase {
       const scrollDuration = this.#props.scrollDuration ?? 300;
       el.style.setProperty('--scroll-duration', `${scrollDuration}ms`);
 
-      el.addEventListener('click', autoFadeoutCtrl);
+      // スマホの場合はクリックイベントを無効にする
+      if (!isMobile) {
+        el.addEventListener('click', autoFadeoutCtrl);
+      }
       enableAutoFadeout();
     });
 
@@ -212,16 +219,19 @@ export class Main extends ComponentBase {
 
     this.#viewerPagesRef = this.createRef((el) => {
       this.#setupCurrentIndexes(el, this.#allPages);
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
+      // スマホの場合はクリックイベントを無効にする
+      if (!isMobile) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
 
-        if (this.#controlArea.visible) {
-          window.clearTimeout(hideMainVisibleId);
-          this.#controlArea.hide();
-        } else {
-          autoFadeoutCtrl();
-        }
-      });
+          if (this.#controlArea.visible) {
+            window.clearTimeout(hideMainVisibleId);
+            this.#controlArea.hide();
+          } else {
+            autoFadeoutCtrl();
+          }
+        });
+      }
     });
   }
 
@@ -358,7 +368,7 @@ export class Main extends ComponentBase {
       },
       {
         root: viewerPagesElm,
-        threshold: 0.2,
+        threshold: 0.6,
       }
     );
 

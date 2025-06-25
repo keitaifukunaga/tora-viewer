@@ -101,6 +101,13 @@
     }
   }
 
+  // スマホでの表示最適化
+  @media (max-width: 768px) {
+    .arrow-button {
+      display: none !important;
+    }
+  }
+
   .viewer-footer-ctrl {
     position: absolute;
     width: 100%;

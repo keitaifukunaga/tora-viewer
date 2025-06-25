@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { jsxFactory } from './base';
 import { ComponentBase } from './base';
+import { isMobileDevice } from '../utils/device-detection';
 
 interface Props {
   index: number;
@@ -32,17 +33,24 @@ export abstract class PageBase extends ComponentBase {
     this.#thumbnailPageRef = this.createRef();
     this.#loadingRef = this.createRef();
 
+    // スマホの場合はクリックイベントを無効にする
+    const isMobile = isMobileDevice();
+
     this.#tapAreaLeftRef = this.createRef((el) => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.#props.onTapLeft();
-      });
+      if (!isMobile) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.#props.onTapLeft();
+        });
+      }
     });
     this.#tapAreaRightRef = this.createRef((el) => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.#props.onTapRight();
-      });
+      if (!isMobile) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.#props.onTapRight();
+        });
+      }
     });
   }
 
