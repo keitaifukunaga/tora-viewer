@@ -11,6 +11,7 @@ export default defineConfig({
     },
     outDir: 'dist/lib',
     minify: 'terser',
+    sourcemap: true,
   },
   esbuild: {
     jsxFactory: 'jsxFactory.h',
