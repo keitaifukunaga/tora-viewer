@@ -28,7 +28,7 @@
     "lint:ts": "tsc --noEmit --emitDeclarationOnly false",
     "lint:es": "eslint --ext .js,.ts,.tsx .",
     "lint:fmt": "prettier --check *.ts src/**/*.{ts,d.ts,tsx}",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && copy dist\\lib\\tora-viewer.es.js ..\\tora-viewer.es.js",
     "prepublishOnly": "npm run build",
     "preview": "vite preview"
   },

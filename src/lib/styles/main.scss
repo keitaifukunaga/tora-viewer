@@ -321,6 +321,21 @@ $page_margin: 20px;
           right: 0;
         }
       }
+
+      // 拡大時のページスタイル
+      &.zoomed {
+        overflow: hidden;
+        
+        .viewer-page-content {
+          touch-action: none;
+        }
+        
+        // 拡大時はタップエリアを無効化
+        .viewer-page-tap-area {
+          pointer-events: none;
+          display: none !important;
+        }
+      }
     }
   }
 
