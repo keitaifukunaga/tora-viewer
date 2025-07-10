@@ -1,19 +1,35 @@
+// モジュールレベル（関数の外側）でキャッシュ変数を定義
+let cachedMobileResult: boolean | null = null;
+let cachedInnerWidth: number | null = null;
+
 /**
  * デバイスがスマホかどうかを判定する
  * @returns スマホの場合はtrue、それ以外はfalse
  */
 export function isMobileDevice(): boolean {
-  // User Agentによる判定
+  if (cachedMobileResult !== null) {
+    return cachedMobileResult;
+  }
+  
+  // 初回のみ判定を実行
   const userAgent = navigator.userAgent.toLowerCase();
   const isMobile = /iphone|android.*mobile|webos|blackberry|iemobile|opera mini/i.test(userAgent);
-  
-  // タッチデバイスの判定
   const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   
-  // 画面サイズによる判定（480px以下をスマホとする）
-  const isSmallScreen = window.innerWidth <= 480;
+  // 初期化時の画面幅を記録
+  if (cachedInnerWidth === null) {
+    cachedInnerWidth = window.innerWidth;
+  }
   
-  return isMobile &&   (hasTouchScreen && isSmallScreen);
+  const isSmallScreen = cachedInnerWidth <= 480;
+  const ret = isMobile && (hasTouchScreen && isSmallScreen);
+  
+  // キャッシュに結果を保存
+  cachedMobileResult = ret;
+  
+  // alert('isMobileDevice:' + (ret ? 'true' : 'false') + ' isMobile:' + isMobile + ' hasTouchScreen:' + hasTouchScreen + ' isSmallScreen:' + isSmallScreen + 'windows.innerWidth:' + window.innerWidth + ' cachedInnerWidth:' + cachedInnerWidth);
+  
+  return ret;
 }
 
 /**
@@ -27,7 +43,10 @@ export function isTabletDevice(): boolean {
   
   // タッチデバイスかつタブレットサイズ（480px超え～1024px以下）
   const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const isTabletSize = window.innerWidth > 480 && window.innerWidth <= 1024;
+  
+  // キャッシュされた初期幅を使用（まだ設定されていない場合は現在の値）
+  const screenWidth = cachedInnerWidth ?? window.innerWidth;
+  const isTabletSize = screenWidth > 480 && screenWidth <= 1024;
   
   return isTablet || (hasTouchScreen && isTabletSize);
 }
