@@ -3,6 +3,7 @@ import { jsxFactory } from './base';
 import { PageBase } from './page-base';
 import { LoadablePageContent, PageContent } from '../interfaces/page-content';
 import { isMobileDevice } from '../utils/device-detection';
+import { getCanvasDPR } from '../utils/device-detection';
 
 export interface PageSize {
   width: number;
@@ -523,18 +524,51 @@ export class Page extends PageBase {
     const imgHeight =
       typeof content === 'string' ? img.height : content.height ?? img.height;
 
+    const isMobile = isMobileDevice();
     // canvasの大きさを画像に合わせる
-    if (this.#canvasRef.current) {
-      this.#canvasRef.current.setAttribute('width', `${imgWidth}`);
-      this.#canvasRef.current.setAttribute('height', `${imgHeight}`);
+    if (isMobile) {
+      // alert('モバイル');
+      if (this.#canvasRef.current) {
+        this.#canvasRef.current.setAttribute('width', `${imgWidth}`);
+        this.#canvasRef.current.setAttribute('height', `${imgHeight}`);
 
-      const imgRatio = imgWidth / imgHeight;
-      if (imgRatio < this.#pageRatio) {
-        // 縦が長いときに切れないスタイルに切り替える
-        this.#canvasRef.current.classList.add('viewer-page-vertically-long');
+        const imgRatio = imgWidth / imgHeight;
+        if (imgRatio < this.#pageRatio) {
+          // 縦が長いときに切れないスタイルに切り替える
+          this.#canvasRef.current.classList.add('viewer-page-vertically-long');
+        }
+      }
+    } else {
+      if (this.#canvasRef.current) {
+        // alert('モバイル以外');
+        // デバイスに応じた適切なDPRを取得
+        const dpr = getCanvasDPR();
+        if (dpr > 1) {
+          // タブレット等でDPR処理が必要な場合
+          this.#canvasRef.current.setAttribute('width', `${imgWidth * dpr}`);
+          this.#canvasRef.current.setAttribute('height', `${imgHeight * dpr}`);
+
+          // CSS上の表示サイズは元のサイズのまま
+          this.#canvasRef.current.style.width = `${imgWidth}px`;
+          this.#canvasRef.current.style.height = `${imgHeight}px`;
+
+          // Context をDPRに合わせてスケーリング
+          ctx.scale(dpr, dpr);
+        } else {
+          // スマホ等でDPR処理が不要な場合（従来通り）
+          this.#canvasRef.current.setAttribute('width', `${imgWidth}`);
+          this.#canvasRef.current.setAttribute('height', `${imgHeight}`);
+        }
+
+        const imgRatio = imgWidth / imgHeight;
+        if (imgRatio < this.#pageRatio) {
+          // 縦が長いときに切れないスタイルに切り替える
+          this.#canvasRef.current.classList.add('viewer-page-vertically-long');
+        }
       }
     }
 
+    // 画像を描画
     ctx.drawImage(img, 0, 0, imgWidth, imgHeight, 0, 0, imgWidth, imgHeight);
   }
 }
