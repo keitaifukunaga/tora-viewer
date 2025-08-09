@@ -250,10 +250,15 @@ $page_margin: 20px;
         max-height: 100%;
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
+        image-rendering: -moz-crisp-edges; /* Firefox */
         // image-rendering: pixelated;
         
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        
+        /* Firefox専用の追加設定 */
+        -moz-text-size-adjust: none;
+        -moz-font-feature-settings: "liga" 1;
 
         &.viewer-page-vertically-long {
           width: auto;
@@ -522,6 +527,28 @@ $page_margin: 20px;
         .viewer-page-content {
           image-rendering: -webkit-optimize-contrast;
           image-rendering: crisp-edges;
+          image-rendering: -moz-crisp-edges; /* Firefox */
+          
+          /* Firefox高解像度向け追加設定 */
+          -moz-osx-font-smoothing: grayscale;
+          -moz-text-size-adjust: none;
+        }
+      }
+    }
+  }
+
+  /* Firefox専用の画像品質最適化 */
+  @supports (-moz-appearance: none) {
+    .viewer-pages {
+      .viewer-page {
+        .viewer-page-content {
+          image-rendering: -moz-crisp-edges;
+          image-rendering: optimizeQuality;
+          -moz-image-region: auto;
+          -moz-force-broken-image-icon: 0;
+          
+          /* Firefox向けフィルター設定 */
+          filter: contrast(1.05) brightness(1.02);
         }
       }
     }
